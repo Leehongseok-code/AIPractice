@@ -1,0 +1,46 @@
+import torch
+import torchvision
+import matplotlib.pyplot
+import numpy
+batch_size=1000
+
+#훈련 데이터
+mnist_train=\
+    torchvision.datasets.MNIST\
+        (root="MNIST_data/",train=True,transform=torchvision.transforms.ToTensor(),download=True)
+
+#실험 데이터
+mnist_test=\
+    torchvision.datasets.MNIST\
+        (root="MNIST_data/", train=False, transform=torchvision.transforms.ToTensor(), download=True)
+
+data_loader = torch.utils.data.DataLoader(mnist_train, batch_size=batch_size, shuffle=True, drop_last=True)
+
+numbers={"0","1","2","3","4","5","6","7","8","9"}
+device=torch.device("cpu")
+linear=torch.nn.Linear(784,10,bias=True).to(device)
+loss=torch.nn.CrossEntropyLoss().to(device)
+SDG=torch.optim.SGD(linear.parameters(),lr=0.1)
+
+total_batch=len(data_loader)#60=60000/1000(total/batch_size)
+training_epochs=10
+
+for epoch in range(training_epochs):
+    total_cost=0
+
+    for X, Y in data_loader:
+        X=X.view(-1,28*28).to(device)
+        Y=Y.to(device)
+
+        hypothesis=linear(X)
+        cost=loss(hypothesis, Y)
+
+        SDG.zero_grad()
+        cost.backward()
+        SDG.step()
+
+        total_cost+=cost
+
+    avg_cost=total_cost/total_batch
+    print("Epoch:","%03d"%(epoch+1),"cost=","{:.9f}".format(avg_cost))
+
