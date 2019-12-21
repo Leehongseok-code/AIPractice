@@ -1,0 +1,96 @@
+import torch
+import torchvision
+import matplotlib.pyplot as plt
+import numpy
+import random
+batch_size=1000
+device="cpu"
+#그리드 버전의 가시화 함수
+def imshow_grid(img):
+    img = torchvision.utils.make_grid(img.cpu().detach())
+    img = (img+1)/2
+    npimg = img.numpy()
+    plt.imshow(numpy.transpose(npimg, (1,2,0)))
+    plt.show()
+
+#훈련 데이터
+mnist_train=\
+    torchvision.datasets.FashionMNIST\
+        (root="./MNIST_Fashion",train=True,transform=torchvision.transforms.ToTensor(),download=True)
+
+#실험 데이터
+mnist_test=\
+    torchvision.datasets.FashionMNIST\
+        (root="./MNIST_Fashion", train=False, transform=torchvision.transforms.ToTensor(), download=True)
+
+data_loader = torch.utils.data.DataLoader(mnist_train, batch_size=batch_size, shuffle=True, drop_last=True)
+#훈련 세팅
+clothes=["T-shirt","Trouser","Pullover","Dress","Coat","Sandal","Shirt","Sneaker","Bag","Ankle Boot"]
+device=torch.device("cpu")
+linear=torch.nn.Linear(784,10,bias=True).to(device)
+loss=torch.nn.CrossEntropyLoss().to(device)
+SDG=torch.optim.SGD(linear.parameters(),lr=0.1)
+
+total_batch=len(data_loader)#60=60000/1000(total/batch_size)
+training_epochs=10
+
+
+#이미지 가져오기
+image, label=mnist_train[0]
+'''''
+#이미지 보여주기
+plt.imshow(image.squeeze().numpy(), cmap='gray')
+
+plt.show()
+'''''
+
+#정답 확인
+
+#훈련 시작
+for epoch in range(training_epochs):
+    total_cost=0
+
+    for X, Y in data_loader:
+        X=X.view(-1,28*28).to(device)
+        Y=Y.to(device)
+
+        hypothesis=linear(X)
+        cost=loss(hypothesis, Y)
+
+        SDG.zero_grad()
+        cost.backward()
+        SDG.step()
+
+        total_cost+=cost
+
+    avg_cost=total_cost/total_batch
+    print("Epoch:","%03d"%(epoch+1),"cost=","{:.9f}".format(avg_cost))
+
+
+#정답 가시화
+with torch.no_grad():
+    X_test = mnist_test.data.view(-1, 28 * 28).float().to(device)
+    Y_test = mnist_test.targets.to(device)
+    prediction = linear(X_test)
+    correct_prediction = torch.argmax(prediction, 1) == Y_test
+    accuracy = correct_prediction.float().mean()
+
+
+
+
+vis_loader=torch.utils.data.DataLoader(mnist_test,16,True)
+img_ans, label_ans=next(iter(vis_loader))
+imshow_grid(img_ans)
+
+label_predicted=linear(img_ans.to(device).view(-1, 28 * 28).float().to(device))
+
+_, top_i = torch.topk(label_predicted, k=1, dim=-1)
+tempp=top_i.transpose(0,1)[0]
+tempa=label_ans.view(1,-1).cpu()[0]
+#print('prediction:',top_i.transpose(0,1))
+#print('real:', label_ans.view(1,-1).cpu())
+for i in tempp:
+   print(clothes[int(i)],end=',')
+print()
+for i in tempa:
+    print(clothes[int(i)],end=',')
