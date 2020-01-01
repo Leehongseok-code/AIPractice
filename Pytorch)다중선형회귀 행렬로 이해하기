@@ -1,0 +1,35 @@
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+
+torch.manual_seed(1)
+x_train=torch.FloatTensor([[73,80,75],
+                           [93,88,93],
+                           [89,91,90],
+                           [96,98,100],
+                           [73,66,70]])
+#입력텐서-3개의 독립변수를 하나의 행렬로써 표현
+y_train=torch.FloatTensor([[152],[185],[180],[196],[142]])#출력텐서
+
+
+#가설 세우기
+w=torch.zeros((3,1),requires_grad=True)
+b=torch.zeros(1,requires_grad=True)
+
+
+
+optimizer=optim.SGD([w,b],lr=1e-5)
+epoch_number=2000#경사 하강법의 반복횟수
+for epoch in range(epoch_number+1):
+    #H(x)계산
+    hypothesis=x_train.matmul(w)+b
+    #cost계산
+    cost=torch.mean((hypothesis-y_train)**2)
+    #cost로 H(x)개선
+    optimizer.zero_grad()
+    cost.backward()
+    optimizer.step()
+    print('Epoch{:4d}/{} hypothesis:{}Cost:{:.6f}'.format(epoch,epoch_number,
+                                                          hypothesis.squeeze(),cost.item()))
+    print(w)
