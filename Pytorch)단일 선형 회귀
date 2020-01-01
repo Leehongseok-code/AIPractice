@@ -1,0 +1,46 @@
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+
+torch.manual_seed(1)
+x_train=torch.FloatTensor([[1],[2],[3]])#입력텐서
+y_train=torch.FloatTensor([[2],[4],[6]])#출력텐서
+
+#x_train,y_train 테스트
+print(x_train)
+print(x_train.shape)
+print(y_train)
+print(y_train.shape)
+
+#가설 세우기
+W=torch.zeros(1,requires_grad=True)#가중치 초기화
+print(W)
+b=torch.zeros(1,requires_grad=True)
+print(b)
+hypothesis=x_train*W+b
+print(hypothesis)
+
+#비용 함수 만들기
+cost=torch.mean((hypothesis-y_train)**2)#**은 제곱을 의미
+print(cost)
+
+#경사 하강법 구현하기
+optimizer=optim.SGD([W,b],lr=0.01)#SGD는 경사 하강법의 일종
+optimizer.zero_grad()#gradiant를 0으로 초기화
+cost.backward()#비용 함수를 미분하여 gradient 계산
+optimizer.step()#W와 b를 업데이트
+
+epoch_number=2000#경사 하강법의 반복횟수
+for epoch in range(epoch_number+1):
+    #H(x)계산
+    hypothesis=x_train*W+b
+    #cost계산
+    cost=torch.mean((hypothesis-y_train)**2)
+    #cost로 H(x)개선
+    optimizer.zero_grad()
+    cost.backward()
+    optimizer.step()
+    if epoch%100==0:
+        print('Epoch{:4d}/{}W:{:.3f},b:{:.3f} Cost:{:.6f}'
+              .format(epoch,epoch_number,W.item(),b.item(),cost.item()))
