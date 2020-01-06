@@ -1,0 +1,97 @@
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import datetime
+import torch.optim as optim
+
+torch.manual_seed(1)
+
+#data loading
+data=pd.read_csv('Data/csvdata/005930.Ks.csv')
+
+#mid price computing
+high=data['High'].values
+low=data['Low'].values
+mid=(high+low)/2
+
+def minmax(data):
+    numerator=data-min(data)
+    denominator=max(data)-min(data)
+    return numerator/(denominator+1e-7)
+
+def build_dataset(time_series,seq_length):#(train_data,7)
+    datax=[]
+    datay=[]
+    for i in range(0,len(time_series)-seq_length-1):
+        #print(time_series.shape)
+        tempx=[]
+        for j in range(i,i+seq_length):
+            tempx.append([time_series[j]])
+        _x=tempx
+        print(_x)
+        #_x=time_series[i:i+seq_length,:]
+        _y=time_series[[i+seq_length]]#다음 날 주가
+        datax.append(_x)
+        datay.append(_y)
+    return np.array(datax),np.array(datay)
+
+seq_length=7
+input_dim=1
+#output은 다음 날 주가 정보 하나이지만, hidden_dim=1이면 예측에 도움을 줄 수 있는 정보 사이즈 부족
+hidden_dim=10
+output_dim=1
+learning_rate=0.01
+iterations=500
+xy=mid
+mid=mid[::-1]#reverse
+
+train_size=int(len(xy)*0.7)
+train_data=xy[0:train_size]
+test_data=xy[train_size-seq_length:]
+train_data=minmax(train_data)
+test_data=minmax(test_data)
+#print(train_data[500])
+
+trainx,trainy=build_dataset(train_data,seq_length)
+testx,testy=build_dataset(test_data,seq_length)
+
+trainx_tensor=torch.FloatTensor(trainx)
+trainy_tensor=torch.FloatTensor(trainy)
+
+testx_tensor=torch.FloatTensor(testx)
+testy_tensor=torch.FloatTensor(testy)
+
+class Net(torch.nn.Module):
+    def __init__(self,input_dim,hidden_dim,output_dim,layers):
+        super(Net,self).__init__()
+        self.rnn=torch.nn.LSTM(input_dim,hidden_dim,num_layers=layers,batch_first=True)
+        # 10차원의 hidden layer를 단일 차원의 outpput layer로 변환
+        self.fc=torch.nn.Linear(hidden_dim,output_dim,bias=True)
+
+    def forward(self,x):
+        x,_status=self.rnn(x)
+        x=self.fc(x[:,-1])
+        return x
+
+model=Net(input_dim,hidden_dim,output_dim,1)
+
+#loss&optimizer setting
+criterion=torch.nn.MSELoss()
+optimizer=optim.Adam(model.parameters(),lr=learning_rate)
+
+for epoch in range(iterations):
+    optimizer.zero_grad()
+    #print(trainx_tensor.shape)
+    outputs=model(trainx_tensor)
+    cost=criterion(outputs,trainy_tensor)
+    cost.backward()
+    optimizer.step()
+    print(epoch,cost.item())
+    print(trainx_tensor.shape,',',trainy_tensor.shape)
+plt.plot(testy)
+plt.plot(model(testx_tensor).data.numpy())
+plt.legend(['original','prediction'])
+plt.show()
