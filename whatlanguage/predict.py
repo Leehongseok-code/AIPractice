@@ -1,5 +1,5 @@
 from languagerecogn import *
-
+import torch
 
 rnn=torch.load('char-rnn-classification.pt')
 
